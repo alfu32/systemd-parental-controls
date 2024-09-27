@@ -1,4 +1,5 @@
 #!/bin/sh
+sudo apt install cpulimit
 
 sudo mkdir -p /var/tracking/applications
 

@@ -1,6 +1,7 @@
 import os
 import json
 import psutil
+import subprocess
 from datetime import datetime, timedelta
 import time
 
@@ -89,13 +90,26 @@ def is_within_usage_limit(log_file, app_name, allowed_minutes):
                     return False
     return True
 
+# Function to throttle the application based on CPU percentage
+def throttle_application(pid, cpu_percentage):
+    if cpu_percentage <= 0:
+        print(f"Throttling disabled for PID {pid}")
+        return
+    elif cpu_percentage >= 100:
+        # Kill the process if 100% or more throttling is specified
+        print(f"Stopping process with PID {pid}")
+        psutil.Process(pid).terminate()
+    else:
+        print(f"Throttling process {pid} to {cpu_percentage}% CPU usage")
+        subprocess.run(["cpulimit", "-p", str(pid), "-l", str(cpu_percentage)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 # Function to track running processes for a specific user based on limits
 def track_processes(user, tracking_dir, limits):
     daily_file, weekly_file, monthly_file, yearly_file, current_daily_file = get_file_paths(user, tracking_dir)
     
     for proc in psutil.process_iter(['pid', 'name', 'username', 'create_time', 'ppid']):
-        # if proc.info['username'] == 'root':  # Exclude root processes
-        #     continue
+        if proc.info['username'] == 'root':  # Exclude root processes
+            continue
 
         try:
             if proc.info['username'] == user:
@@ -110,11 +124,12 @@ def track_processes(user, tracking_dir, limits):
 
                 # Check if the app is in the limits and if the current time is within allowed hours
                 for limit in limits:
-                    if app_name.lower() == limit["application"]: # and is_within_allowed_hours(limit['start_hour'], limit['end_hour']):
+                    if app_name.lower() == limit['application'].lower(): # and is_within_allowed_hours(limit['start_hour'], limit['end_hour']):
                         print(f"    - {app_name} has limits",flush=True)
                         if not is_within_usage_limit(daily_file, app_name, limit['minutes']):
-                            print(f"    ! Usage limit reached for {app_name}, throttling application.")
-                            continue  # Skip this application if it has exceeded the limit
+                            print(f"Usage limit reached for {app_name}, throttling process.")
+                            # throttle_application(proc.info['pid'], limit['cpu_percentage'])
+                            continue  # Skip further tracking for over-limit applications
 
                         process_info_by_pid = {
                             "pid": proc.info['pid'],
@@ -147,9 +162,9 @@ if __name__ == "__main__":
     tracking_dir = "/var/tracking/applications"
     check_interval = CHECK_INTERVAL
 
-# ## while True:
+    # ## while True:
     for user, user_config in config.items():
         limits = user_config.get('limits', [])
         print(f"## Tracking user {user}",flush=True)
         track_processes(user, tracking_dir, limits)
-# ##     time.sleep(check_interval)
+    # ##     time.sleep(check_interval)
