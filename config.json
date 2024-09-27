@@ -1,0 +1,24 @@
+{
+    "alfu64": {
+        "limits": [
+            {
+                "application": "code",
+                "minutes": 240,
+                "start_hour": "10:40",
+                "end_hour": "18:50"
+            },
+            {
+                "application": "chrome",
+                "minutes": 340,
+                "start_hour": "09:30",
+                "end_hour": "19:50"
+            },
+            {
+                "application": "teams-for-linux",
+                "minutes": 740,
+                "start_hour": "09:30",
+                "end_hour": "19:50"
+            }
+        ]
+    }
+}
